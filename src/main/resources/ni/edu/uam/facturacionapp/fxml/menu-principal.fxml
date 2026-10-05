@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="mainBorderPane" prefHeight="700.0" prefWidth="1000.0" stylesheets="@../styles/styles.css" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ni.edu.uam.facturacionapp.controller.MenuPrincipalController">
+
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <left>
+        <VBox prefWidth="230.0" spacing="12.0" styleClass="sidebar" BorderPane.alignment="CENTER">
+            <children>
+                <!-- Encabezado del Sistema -->
+                <VBox spacing="4.0" styleClass="brand-container">
+                    <children>
+                        <Label styleClass="brand-title" text="SISTEMA FACTURACIÓN" />
+                        <Label styleClass="brand-subtitle" text="Panel de Gestión" />
+                    </children>
+                </VBox>
+
+                <!-- Botones de Navegación Principal -->
+                <VBox spacing="6.0" VBox.vgrow="ALWAYS">
+                    <children>
+                        <Button fx:id="btnProductos" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#abrirProductos" styleClass="nav-button" text="📦  Productos" />
+                        <Button fx:id="btnCategorias" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#abrirCategorias" styleClass="nav-button" text="🏷  Categorías" />
+                    </children>
+                    <VBox.margin>
+                        <Insets top="15.0" />
+                    </VBox.margin>
+                </VBox>
+
+                <!-- Botón de Salir al final de la barra lateral -->
+                <Button fx:id="btnSalir" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#salir" styleClass="nav-button-danger" text="🚪  Cerrar Sesión" />
+            </children>
+            <padding>
+                <Insets bottom="20.0" left="15.0" right="15.0" top="20.0" />
+            </padding>
+        </VBox>
+    </left>
+
+    <!-- ÁREA CENTRAL DINÁMICA -->
+    <center>
+        <VBox alignment="CENTER" spacing="15.0" styleClass="content-area" BorderPane.alignment="CENTER">
+            <children>
+                <Label styleClass="welcome-title" text="¡Bienvenido al Sistema!" />
+                <Label styleClass="welcome-subtitle" text="Selecciona una opción del menú lateral para comenzar a trabajar." />
+            </children>
+        </VBox>
+    </center>
+</BorderPane>
