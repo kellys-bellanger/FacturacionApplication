@@ -117,80 +117,63 @@ public class ProductoController {
         });
     }
 
-    private boolean esFormularioValido(Integer idExcluir) {
-        String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
-        String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
+    // Paso 17: Método para validar y construir el objeto Producto desde el formulario
+    private Producto obtenerProductoFormulario() {
+        String codigo = txtCodigo.getText().trim();
+        String nombre = txtNombre.getText().trim();
 
-        // Paso 9: Validar código obligatorio
         if (codigo.isEmpty()) {
-            mostrarError("Validación", "El código del producto es obligatorio.");
             txtCodigo.requestFocus();
-            return false;
+            throw new IllegalArgumentException("El código es obligatorio.");
         }
 
-        // Paso 14 & 15: Controlar códigos duplicados capturando SQLException
-        try {
-            boolean duplicado = (idExcluir == null)
-                    ? productoDAO.existeCodigo(codigo)
-                    : productoDAO.existeCodigoExcluyendoId(codigo, idExcluir);
-
-            if (duplicado) {
-                mostrarError("Código duplicado", "El código del producto '" + codigo + "' ya está registrado. Ingrese uno diferente.");
-                txtCodigo.requestFocus();
-                return false;
-            }
-        } catch (SQLException e) {
-            mostrarError("Error de base de datos", "No fue posible verificar el código del producto.");
-            System.err.println(e.getMessage());
-            return false;
-        }
-
-        // Paso 9: Validar nombre obligatorio
         if (nombre.isEmpty()) {
-            mostrarError("Validación", "El nombre del producto es obligatorio.");
             txtNombre.requestFocus();
-            return false;
+            throw new IllegalArgumentException("El nombre es obligatorio.");
         }
 
-        // Paso 10: Validar categoría
         Categoria categoria = cmbCategoria.getSelectionModel().getSelectedItem();
         if (categoria == null) {
-            mostrarError("Validación", "Debe seleccionar una categoría.");
             cmbCategoria.requestFocus();
-            return false;
+            throw new IllegalArgumentException("Debe seleccionar una categoría.");
         }
 
-        // Pasos 11 & 12: Validar precio
         BigDecimal precio;
         try {
             precio = new BigDecimal(txtPrecio.getText().trim());
         } catch (NumberFormatException e) {
-            mostrarError("Precio incorrecto", "El precio debe contener únicamente valores numéricos.");
             txtPrecio.requestFocus();
-            return false;
+            throw new IllegalArgumentException("El precio debe ser numérico.");
         }
 
         if (precio.compareTo(BigDecimal.ZERO) <= 0) {
-            mostrarError("Precio incorrecto", "El precio de venta debe ser mayor que cero.");
             txtPrecio.requestFocus();
-            return false;
+            throw new IllegalArgumentException("El precio debe ser mayor que cero.");
         }
 
-        // Paso 13: Validar existencia
+        int existencia;
         try {
-            int existencia = Integer.parseInt(txtExistencia.getText().trim());
-            if (existencia < 0) {
-                mostrarError("Existencia incorrecta", "La existencia no puede ser negativa.");
-                txtExistencia.requestFocus();
-                return false;
-            }
+            existencia = Integer.parseInt(txtExistencia.getText().trim());
         } catch (NumberFormatException e) {
-            mostrarError("Existencia incorrecta", "La existencia debe ser un número entero.");
             txtExistencia.requestFocus();
-            return false;
+            throw new IllegalArgumentException("La existencia debe ser un número entero.");
         }
 
-        return true;
+        if (existencia < 0) {
+            txtExistencia.requestFocus();
+            throw new IllegalArgumentException("La existencia no puede ser negativa.");
+        }
+
+        return new Producto(
+                null,
+                codigo,
+                nombre,
+                categoria,
+                precio,
+                existencia,
+                rutaImagenSeleccionada,
+                chkActivo.isSelected()
+        );
     }
 
     @FXML
@@ -207,40 +190,33 @@ public class ProductoController {
         }
     }
 
-    // Paso 15: Manejo de SQLException al guardar
     @FXML
     private void guardar() {
-        if (esFormularioValido(null)) {
-            try {
-                BigDecimal precio = new BigDecimal(txtPrecio.getText().trim());
-                int existencia = Integer.parseInt(txtExistencia.getText().trim());
+        try {
+            Producto producto = obtenerProductoFormulario();
 
-                Producto producto = new Producto(
-                        null,
-                        txtCodigo.getText().trim(),
-                        txtNombre.getText().trim(),
-                        cmbCategoria.getSelectionModel().getSelectedItem(),
-                        precio,
-                        existencia,
-                        rutaImagenSeleccionada,
-                        chkActivo.isSelected()
-                );
-
-                if (productoDAO.guardar(producto)) {
-                    mostrarExito("Producto registrado", "El producto se guardó correctamente.");
-                    cargarProductos();
-                    limpiar();
-                } else {
-                    mostrarError("Error de base de datos", "No fue posible registrar el producto.");
-                }
-            } catch (SQLException e) {
-                mostrarError("Error de base de datos", "No fue posible registrar el producto.");
-                System.err.println(e.getMessage());
+            // Verificación de código duplicado
+            if (productoDAO.existeCodigo(producto.getCodigo())) {
+                mostrarError("Código duplicado", "El código '" + producto.getCodigo() + "' ya está registrado. Ingrese uno diferente.");
+                txtCodigo.requestFocus();
+                return;
             }
+
+            if (productoDAO.guardar(producto)) {
+                mostrarExito("Producto registrado", "El producto se guardó correctamente.");
+                cargarProductos();
+                limpiar();
+            } else {
+                mostrarError("Error de base de datos", "No fue posible registrar el producto.");
+            }
+        } catch (IllegalArgumentException e) {
+            mostrarError("Validación", e.getMessage());
+        } catch (SQLException e) {
+            mostrarError("Error de base de datos", "No fue posible registrar el producto.");
+            System.err.println(e.getMessage());
         }
     }
 
-    // Paso 15: Manejo de SQLException al actualizar
     @FXML
     private void actualizar() {
         if (productoSeleccionado == null) {
@@ -248,31 +224,39 @@ public class ProductoController {
             return;
         }
 
-        if (esFormularioValido(productoSeleccionado.getId())) {
-            try {
-                productoSeleccionado.setCodigo(txtCodigo.getText().trim());
-                productoSeleccionado.setNombre(txtNombre.getText().trim());
-                productoSeleccionado.setCategoria(cmbCategoria.getSelectionModel().getSelectedItem());
-                productoSeleccionado.setPrecioVenta(new BigDecimal(txtPrecio.getText().trim()));
-                productoSeleccionado.setExistencia(Integer.parseInt(txtExistencia.getText().trim()));
-                productoSeleccionado.setRutaImagen(rutaImagenSeleccionada);
-                productoSeleccionado.setActivo(chkActivo.isSelected());
+        try {
+            Producto datosNuevo = obtenerProductoFormulario();
 
-                if (productoDAO.actualizar(productoSeleccionado)) {
-                    mostrarExito("Producto actualizado", "El producto se actualizó correctamente.");
-                    cargarProductos();
-                    limpiar();
-                } else {
-                    mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
-                }
-            } catch (SQLException e) {
-                mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
-                System.err.println(e.getMessage());
+            // Verificación de código duplicado excluyendo el ID actual
+            if (productoDAO.existeCodigoExcluyendoId(datosNuevo.getCodigo(), productoSeleccionado.getId())) {
+                mostrarError("Código duplicado", "El código '" + datosNuevo.getCodigo() + "' ya pertenece a otro producto.");
+                txtCodigo.requestFocus();
+                return;
             }
+
+            productoSeleccionado.setCodigo(datosNuevo.getCodigo());
+            productoSeleccionado.setNombre(datosNuevo.getNombre());
+            productoSeleccionado.setCategoria(datosNuevo.getCategoria());
+            productoSeleccionado.setPrecioVenta(datosNuevo.getPrecioVenta());
+            productoSeleccionado.setExistencia(datosNuevo.getExistencia());
+            productoSeleccionado.setRutaImagen(datosNuevo.getRutaImagen());
+            productoSeleccionado.setActivo(datosNuevo.isActivo());
+
+            if (productoDAO.actualizar(productoSeleccionado)) {
+                mostrarExito("Producto actualizado", "El producto se actualizó correctamente.");
+                cargarProductos();
+                limpiar();
+            } else {
+                mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
+            }
+        } catch (IllegalArgumentException e) {
+            mostrarError("Validación", e.getMessage());
+        } catch (SQLException e) {
+            mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
+            System.err.println(e.getMessage());
         }
     }
 
-    // Paso 15: Manejo de SQLException al eliminar
     @FXML
     private void eliminar() {
         if (productoSeleccionado == null) {
