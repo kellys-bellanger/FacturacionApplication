@@ -117,13 +117,12 @@ public class ProductoController {
         });
     }
 
-    // 8 y 9. Validar campos obligatorios y formato de Producto
+    // 8, 9 y 10. Validaciones del módulo Producto
     private boolean esFormularioValido(Integer idExcluir) {
         String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
         String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
         String precioStr = txtPrecio.getText() == null ? "" : txtPrecio.getText().trim();
         String existenciaStr = txtExistencia.getText() == null ? "" : txtExistencia.getText().trim();
-        Categoria categoria = cmbCategoria.getValue();
 
         // Paso 9: Validar código obligatorio
         if (codigo.isEmpty()) {
@@ -161,9 +160,14 @@ public class ProductoController {
             return false;
         }
 
-        // Categoría obligatoria
+        // Paso 10: Validar la categoría del Producto
+        Categoria categoria = cmbCategoria.getSelectionModel().getSelectedItem();
+
         if (categoria == null) {
-            mostrarError("Validación", "Debe seleccionar una categoría.");
+            mostrarError(
+                    "Validación",
+                    "Debe seleccionar una categoría."
+            );
             cmbCategoria.requestFocus();
             return false;
         }
@@ -237,7 +241,7 @@ public class ProductoController {
                         null,
                         txtCodigo.getText().trim(),
                         txtNombre.getText().trim(),
-                        cmbCategoria.getValue(),
+                        cmbCategoria.getSelectionModel().getSelectedItem(),
                         precio,
                         existencia,
                         rutaImagenSeleccionada,
@@ -268,7 +272,7 @@ public class ProductoController {
             try {
                 productoSeleccionado.setCodigo(txtCodigo.getText().trim());
                 productoSeleccionado.setNombre(txtNombre.getText().trim());
-                productoSeleccionado.setCategoria(cmbCategoria.getValue());
+                productoSeleccionado.setCategoria(cmbCategoria.getSelectionModel().getSelectedItem());
                 productoSeleccionado.setPrecioVenta(new BigDecimal(txtPrecio.getText().trim()));
                 productoSeleccionado.setExistencia(Integer.parseInt(txtExistencia.getText().trim()));
                 productoSeleccionado.setRutaImagen(rutaImagenSeleccionada);
