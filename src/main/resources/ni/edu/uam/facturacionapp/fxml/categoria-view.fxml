@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<HBox spacing="20.0" styleClass="view-container" stylesheets="@../styles/styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ni.edu.uam.facturacionapp.controller.CategoriaController">
+<HBox spacing="20.0" styleClass="view-container" stylesheets="@../styles/style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ni.edu.uam.facturacionapp.controller.CategoriaController">
     <padding>
         <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
     </padding>

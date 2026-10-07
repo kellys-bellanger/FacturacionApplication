@@ -2,7 +2,6 @@ package ni.edu.uam.facturacionapp.controller;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -14,7 +13,7 @@ import java.util.Optional;
 
 public class CategoriaController {
 
-    @FXML private TextField txtNombre, txtBuscar;
+    @FXML private TextField txtNombre;
     @FXML private CheckBox chkActivo;
     @FXML private TableView<Categoria> tblCategorias;
     @FXML private TableColumn<Categoria, Integer> colId;
@@ -23,19 +22,15 @@ public class CategoriaController {
 
     private final CategoriaDAO categoriaDAO = new CategoriaDAO();
     private final ObservableList<Categoria> listaCategorias = FXCollections.observableArrayList();
-    private FilteredList<Categoria> categoriasFiltradas;
     private Categoria categoriaSeleccionada;
 
     @FXML
     private void initialize() {
         colId.setCellValueFactory(new PropertyValueFactory<>("id"));
         colNombre.setCellValueFactory(new PropertyValueFactory<>("nombre"));
-        colActivo.setCellValueFactory(new PropertyValueFactory<>("activo"));
+        colActivo.setCellValueFactory(new PropertyValueFactory<>("activa"));
 
-        categoriasFiltradas = new FilteredList<>(listaCategorias, p -> true);
-        tblCategorias.setItems(categoriasFiltradas);
-
-        txtBuscar.textProperty().addListener((obs, oldVal, newVal) -> aplicarFiltro());
+        tblCategorias.setItems(listaCategorias);
 
         tblCategorias.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
@@ -54,19 +49,9 @@ public class CategoriaController {
         listaCategorias.addAll(categoriaDAO.listar());
     }
 
-    private void aplicarFiltro() {
-        String filtro = txtBuscar.getText() == null ? "" : txtBuscar.getText().toLowerCase().trim();
-        categoriasFiltradas.setPredicate(cat -> {
-            if (filtro.isEmpty()) return true;
-            return cat.getNombre().toLowerCase().contains(filtro);
-        });
-    }
-
-    // Método para validar y construir Categoria (Pruebas 1 y 2)
     private Categoria obtenerCategoriaFormulario() {
         String nombre = txtNombre.getText() != null ? txtNombre.getText().trim() : "";
 
-        // Pruebas 1 y 2: Nombre vacío o solo espacios
         if (nombre.isEmpty()) {
             throw new IllegalArgumentException("El nombre es obligatorio.");
         }
@@ -79,7 +64,6 @@ public class CategoriaController {
         try {
             Categoria categoria = obtenerCategoriaFormulario();
 
-            // Prueba 3: Nombre duplicado
             if (categoriaDAO.existeNombre(categoria.getNombre())) {
                 mostrarAdvertencia("Advertencia", "Ya existe una categoría con ese nombre.");
                 return;
@@ -104,7 +88,6 @@ public class CategoriaController {
 
     @FXML
     private void actualizarCategoria() {
-        // Prueba 5: Presionar actualizar sin selección
         if (categoriaSeleccionada == null || categoriaSeleccionada.getId() == null) {
             mostrarAdvertencia("Selección requerida", "Debe seleccionar una categoría de la tabla para actualizar.");
             return;
@@ -113,7 +96,6 @@ public class CategoriaController {
         try {
             Categoria datosNuevos = obtenerCategoriaFormulario();
 
-            // Verificar duplicado excluyendo el ID seleccionado
             if (categoriaDAO.existeNombreExcluyendoId(datosNuevos.getNombre(), categoriaSeleccionada.getId())) {
                 mostrarAdvertencia("Advertencia", "Ya existe otra categoría con el nombre '" + datosNuevos.getNombre() + "'.");
                 return;
@@ -164,7 +146,6 @@ public class CategoriaController {
                     mostrarError("Error de base de datos", "No fue posible completar la operación.");
                 }
             } catch (SQLException e) {
-                // Prueba 4: Eliminar categoría que tiene productos asociados (FK constraint)
                 if (e.getErrorCode() == 547) {
                     mostrarError("Restricción de integridad", "No puede eliminar la categoría porque tiene productos asociados.");
                 } else {
