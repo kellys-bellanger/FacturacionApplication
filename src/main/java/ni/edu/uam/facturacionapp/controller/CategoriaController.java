@@ -47,18 +47,16 @@ public class CategoriaController {
         listaCategorias.addAll(categoriaDAO.listar());
     }
 
-    // 4. Validaciones del módulo Categoria (Implementación Paso 5 mediante consulta a BD)
+    // Validaciones del módulo Categoria
     private boolean validarCategoria(Integer idExcluir) {
         String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
 
-        // El nombre no puede estar vacío ni contener únicamente espacios
         if (nombre.isEmpty()) {
             mostrarError("Validación", "El nombre de la categoría es obligatorio.");
             txtNombre.requestFocus();
             return false;
         }
 
-        // Verificación en BD evitando nombres duplicados
         try {
             boolean duplicado = (idExcluir == null)
                     ? categoriaDAO.existeNombre(nombre)
@@ -95,19 +93,27 @@ public class CategoriaController {
         }
     }
 
+    // 6. Validación para actualizar Categoria
     @FXML
     private void actualizar() {
-        if (categoriaSeleccionada == null) {
-            mostrarError("Validación", "Debe seleccionar una categoría de la tabla para actualizar.");
+        Categoria seleccionada = tblCategorias.getSelectionModel().getSelectedItem();
+
+        // Verificación de selección
+        if (seleccionada == null) {
+            mostrarAdvertencia(
+                    "Seleccione una categoría",
+                    "Debe seleccionar la categoría que desea actualizar."
+            );
             return;
         }
 
-        if (validarCategoria(categoriaSeleccionada.getId())) {
-            categoriaSeleccionada.setNombre(txtNombre.getText().trim());
-            categoriaSeleccionada.setActiva(chkActivo.isSelected());
+        // Validación de nombre previa al UPDATE
+        if (validarCategoria(seleccionada.getId())) {
+            seleccionada.setNombre(txtNombre.getText().trim());
+            seleccionada.setActiva(chkActivo.isSelected());
 
             try {
-                if (categoriaDAO.actualizar(categoriaSeleccionada)) {
+                if (categoriaDAO.actualizar(seleccionada)) {
                     mostrarInfo("Éxito", "Categoría actualizada con éxito.");
                     cargarCategorias();
                     limpiar();
@@ -123,7 +129,7 @@ public class CategoriaController {
     @FXML
     private void eliminar() {
         if (categoriaSeleccionada == null) {
-            mostrarError("Validación", "Debe seleccionar una categoría de la tabla para eliminar.");
+            mostrarAdvertencia("Seleccione una categoría", "Debe seleccionar una categoría de la tabla para eliminar.");
             return;
         }
 
@@ -156,8 +162,16 @@ public class CategoriaController {
         tblCategorias.getSelectionModel().clearSelection();
     }
 
-    private void mostrarError(String titulo, String contenido) {
+    private void mostrarAdvertencia(String titulo, String contenido) {
         Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(contenido);
+        alert.showAndWait();
+    }
+
+    private void mostrarError(String titulo, String contenido) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(titulo);
         alert.setHeaderText(null);
         alert.setContentText(contenido);
