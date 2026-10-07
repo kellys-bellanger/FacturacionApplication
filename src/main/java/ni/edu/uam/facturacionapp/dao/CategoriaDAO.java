@@ -108,4 +108,26 @@ public class CategoriaDAO {
         }
         return false;
     }
+
+    // Paso 7: Validar eliminación de Categoria si existen productos asociados
+    public boolean tieneProductos(int categoriaId) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM producto
+            WHERE categoria_id = ?
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, categoriaId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
 }

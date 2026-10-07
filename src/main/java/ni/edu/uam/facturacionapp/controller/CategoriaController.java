@@ -126,31 +126,46 @@ public class CategoriaController {
         }
     }
 
+    // 7. Validar eliminación de Categoria
     @FXML
     private void eliminar() {
-        if (categoriaSeleccionada == null) {
-            mostrarAdvertencia("Seleccione una categoría", "Debe seleccionar una categoría de la tabla para eliminar.");
+        Categoria seleccionada = tblCategorias.getSelectionModel().getSelectedItem();
+
+        if (seleccionada == null) {
+            mostrarAdvertencia(
+                    "Seleccione una categoría",
+                    "Debe seleccionar la categoría que desea eliminar."
+            );
             return;
         }
 
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Confirmar eliminación");
-        confirm.setHeaderText(null);
-        confirm.setContentText("¿Está seguro de eliminar la categoría '" + categoriaSeleccionada.getNombre() + "'?");
+        try {
+            // Verificar si existen productos asociados antes de proceder
+            if (categoriaDAO.tieneProductos(seleccionada.getId())) {
+                mostrarAdvertencia(
+                        "Operación Cancelada",
+                        "No se puede eliminar la categoría '" + seleccionada.getNombre() + "' porque tiene productos asociados."
+                );
+                return;
+            }
 
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                if (categoriaDAO.eliminar(categoriaSeleccionada.getId())) {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Confirmar eliminación");
+            confirm.setHeaderText(null);
+            confirm.setContentText("¿Está seguro de eliminar la categoría '" + seleccionada.getNombre() + "'?");
+
+            Optional<ButtonType> result = confirm.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                if (categoriaDAO.eliminar(seleccionada.getId())) {
                     mostrarInfo("Éxito", "Categoría eliminada con éxito.");
                     cargarCategorias();
                     limpiar();
                 } else {
                     mostrarError("Error", "No se pudo eliminar la categoría.");
                 }
-            } catch (Exception e) {
-                mostrarError("Integridad Referencial", "No se puede eliminar la categoría porque está asociada a uno o más productos.");
             }
+        } catch (SQLException e) {
+            mostrarError("Error DB", "Error al verificar la eliminación en la base de datos: " + e.getMessage());
         }
     }
 
