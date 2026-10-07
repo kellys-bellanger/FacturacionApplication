@@ -8,6 +8,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import ni.edu.uam.facturacionapp.dao.CategoriaDAO;
 import ni.edu.uam.facturacionapp.model.Categoria;
 
+import java.sql.SQLException;
 import java.util.Optional;
 
 public class CategoriaController {
@@ -46,7 +47,7 @@ public class CategoriaController {
         listaCategorias.addAll(categoriaDAO.listar());
     }
 
-    // 4. Validaciones del módulo Categoria
+    // 4. Validaciones del módulo Categoria (Implementación Paso 5 mediante consulta a BD)
     private boolean validarCategoria(Integer idExcluir) {
         String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
 
@@ -57,13 +58,19 @@ public class CategoriaController {
             return false;
         }
 
-        // No deberán existir categorías con el mismo nombre
-        boolean duplicado = listaCategorias.stream()
-                .anyMatch(c -> !c.getId().equals(idExcluir) && c.getNombre().equalsIgnoreCase(nombre));
+        // Verificación en BD evitando nombres duplicados
+        try {
+            boolean duplicado = (idExcluir == null)
+                    ? categoriaDAO.existeNombre(nombre)
+                    : categoriaDAO.existeNombreExcluyendoId(nombre, idExcluir);
 
-        if (duplicado) {
-            mostrarError("Validación", "Ya existe una categoría registrada con el nombre: " + nombre);
-            txtNombre.requestFocus();
+            if (duplicado) {
+                mostrarError("Validación", "Ya existe una categoría registrada con el nombre: " + nombre);
+                txtNombre.requestFocus();
+                return false;
+            }
+        } catch (SQLException e) {
+            mostrarError("Error DB", "Error al verificar duplicados en la base de datos: " + e.getMessage());
             return false;
         }
 
@@ -90,7 +97,6 @@ public class CategoriaController {
 
     @FXML
     private void actualizar() {
-        // Para actualizar debe existir una categoría seleccionada
         if (categoriaSeleccionada == null) {
             mostrarError("Validación", "Debe seleccionar una categoría de la tabla para actualizar.");
             return;
@@ -116,7 +122,6 @@ public class CategoriaController {
 
     @FXML
     private void eliminar() {
-        // Para eliminar debe existir una categoría seleccionada
         if (categoriaSeleccionada == null) {
             mostrarError("Validación", "Debe seleccionar una categoría de la tabla para eliminar.");
             return;

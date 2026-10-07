@@ -11,7 +11,6 @@ public class CategoriaDAO {
 
     public List<Categoria> listar() {
         List<Categoria> lista = new ArrayList<>();
-        // En PostgreSQL la columna es 'activa' según el script del proyecto
         String sql = "SELECT id, nombre, activa FROM categoria ORDER BY id ASC";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -22,7 +21,7 @@ public class CategoriaDAO {
                 lista.add(new Categoria(
                         rs.getInt("id"),
                         rs.getString("nombre"),
-                        rs.getBoolean("activa") // 'activa' para coincidir con la BD
+                        rs.getBoolean("activa")
                 ));
             }
         } catch (SQLException e) {
@@ -63,5 +62,50 @@ public class CategoriaDAO {
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
         }
+    }
+
+    // Paso 5: Verificar existencia por nombre (Guardar / Inserción)
+    public boolean existeNombre(String nombre) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM categoria
+            WHERE LOWER(nombre) = LOWER(?)
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, nombre);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Paso 5: Verificar existencia excluyendo un ID (Actualizar / UPDATE)
+    public boolean existeNombreExcluyendoId(String nombre, int idExcluir) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM categoria
+            WHERE LOWER(nombre) = LOWER(?) AND id <> ?
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, nombre);
+            ps.setInt(2, idExcluir);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
     }
 }
