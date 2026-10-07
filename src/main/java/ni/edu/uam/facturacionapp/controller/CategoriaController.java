@@ -46,18 +46,24 @@ public class CategoriaController {
         listaCategorias.addAll(categoriaDAO.listar());
     }
 
-    private boolean esFormularioValido(Integer idExcluir) {
-        if (txtNombre.getText() == null || txtNombre.getText().isBlank()) {
-            mensaje(Alert.AlertType.WARNING, "El campo Nombre es obligatorio.");
+    // 4. Validaciones del módulo Categoria
+    private boolean validarCategoria(Integer idExcluir) {
+        String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
+
+        // El nombre no puede estar vacío ni contener únicamente espacios
+        if (nombre.isEmpty()) {
+            mostrarError("Validación", "El nombre de la categoría es obligatorio.");
+            txtNombre.requestFocus();
             return false;
         }
 
-        String nombreIngresado = txtNombre.getText().trim();
+        // No deberán existir categorías con el mismo nombre
         boolean duplicado = listaCategorias.stream()
-                .anyMatch(c -> !c.getId().equals(idExcluir) && c.getNombre().equalsIgnoreCase(nombreIngresado));
+                .anyMatch(c -> !c.getId().equals(idExcluir) && c.getNombre().equalsIgnoreCase(nombre));
 
         if (duplicado) {
-            mensaje(Alert.AlertType.WARNING, "Ya existe una categoría registrada con el nombre: " + nombreIngresado);
+            mostrarError("Validación", "Ya existe una categoría registrada con el nombre: " + nombre);
+            txtNombre.requestFocus();
             return false;
         }
 
@@ -66,51 +72,53 @@ public class CategoriaController {
 
     @FXML
     private void guardar() {
-        if (esFormularioValido(null)) {
+        if (validarCategoria(null)) {
             Categoria nueva = new Categoria(null, txtNombre.getText().trim(), chkActivo.isSelected());
             try {
                 if (categoriaDAO.guardar(nueva)) {
-                    mensaje(Alert.AlertType.INFORMATION, "Categoría guardada con éxito.");
+                    mostrarInfo("Éxito", "Categoría guardada con éxito.");
                     cargarCategorias();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo guardar la categoría en la base de datos.");
+                    mostrarError("Error", "No se pudo guardar la categoría en la base de datos.");
                 }
             } catch (Exception e) {
-                mensaje(Alert.AlertType.ERROR, "Error de base de datos al guardar: " + e.getMessage());
+                mostrarError("Error DB", "Error de base de datos al guardar: " + e.getMessage());
             }
         }
     }
 
     @FXML
     private void actualizar() {
+        // Para actualizar debe existir una categoría seleccionada
         if (categoriaSeleccionada == null) {
-            mensaje(Alert.AlertType.WARNING, "Seleccione una categoría de la tabla.");
+            mostrarError("Validación", "Debe seleccionar una categoría de la tabla para actualizar.");
             return;
         }
 
-        if (esFormularioValido(categoriaSeleccionada.getId())) {
+        if (validarCategoria(categoriaSeleccionada.getId())) {
             categoriaSeleccionada.setNombre(txtNombre.getText().trim());
             categoriaSeleccionada.setActiva(chkActivo.isSelected());
 
             try {
                 if (categoriaDAO.actualizar(categoriaSeleccionada)) {
-                    mensaje(Alert.AlertType.INFORMATION, "Categoría actualizada con éxito.");
+                    mostrarInfo("Éxito", "Categoría actualizada con éxito.");
                     cargarCategorias();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo actualizar la categoría.");
+                    mostrarError("Error", "No se pudo actualizar la categoría.");
                 }
             } catch (Exception e) {
-                mensaje(Alert.AlertType.ERROR, "Error de base de datos al actualizar: " + e.getMessage());
+                mostrarError("Error DB", "Error de base de datos al actualizar: " + e.getMessage());
             }
         }
     }
 
     @FXML
     private void eliminar() {
+        // Para eliminar debe existir una categoría seleccionada
         if (categoriaSeleccionada == null) {
-            mensaje(Alert.AlertType.WARNING, "Seleccione una categoría de la tabla.");
+            mostrarError("Validación", "Debe seleccionar una categoría de la tabla para eliminar.");
             return;
         }
 
@@ -123,14 +131,14 @@ public class CategoriaController {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
                 if (categoriaDAO.eliminar(categoriaSeleccionada.getId())) {
-                    mensaje(Alert.AlertType.INFORMATION, "Categoría eliminada con éxito.");
+                    mostrarInfo("Éxito", "Categoría eliminada con éxito.");
                     cargarCategorias();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo eliminar la categoría.");
+                    mostrarError("Error", "No se pudo eliminar la categoría.");
                 }
             } catch (Exception e) {
-                mensaje(Alert.AlertType.ERROR, "No se puede eliminar la categoría porque está asociada a uno o más productos.");
+                mostrarError("Integridad Referencial", "No se puede eliminar la categoría porque está asociada a uno o más productos.");
             }
         }
     }
@@ -143,7 +151,19 @@ public class CategoriaController {
         tblCategorias.getSelectionModel().clearSelection();
     }
 
-    private void mensaje(Alert.AlertType tipo, String texto) {
-        new Alert(tipo, texto, ButtonType.OK).showAndWait();
+    private void mostrarError(String titulo, String contenido) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(contenido);
+        alert.showAndWait();
+    }
+
+    private void mostrarInfo(String titulo, String contenido) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(contenido);
+        alert.showAndWait();
     }
 }
