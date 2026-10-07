@@ -117,7 +117,7 @@ public class ProductoController {
         });
     }
 
-    // 8. Validaciones del módulo Producto
+    // 8 y 9. Validar campos obligatorios y formato de Producto
     private boolean esFormularioValido(Integer idExcluir) {
         String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
         String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
@@ -125,46 +125,52 @@ public class ProductoController {
         String existenciaStr = txtExistencia.getText() == null ? "" : txtExistencia.getText().trim();
         Categoria categoria = cmbCategoria.getValue();
 
-        // 1. Código: Obligatorio
+        // Paso 9: Validar código obligatorio
         if (codigo.isEmpty()) {
-            mensaje(Alert.AlertType.WARNING, "El código del producto es obligatorio.");
+            mostrarError(
+                    "Validación",
+                    "El código del producto es obligatorio."
+            );
             txtCodigo.requestFocus();
             return false;
         }
 
-        // 1. Código: No duplicado (consulta a BD)
+        // Validar código no duplicado (BD)
         try {
             boolean duplicado = (idExcluir == null)
                     ? productoDAO.existeCodigo(codigo)
                     : productoDAO.existeCodigoExcluyendoId(codigo, idExcluir);
 
             if (duplicado) {
-                mensaje(Alert.AlertType.WARNING, "El código del producto '" + codigo + "' ya está registrado. Ingrese uno diferente.");
+                mostrarError("Validación", "El código del producto '" + codigo + "' ya está registrado. Ingrese uno diferente.");
                 txtCodigo.requestFocus();
                 return false;
             }
         } catch (SQLException e) {
-            mensaje(Alert.AlertType.ERROR, "Error al verificar el código del producto en la base de datos: " + e.getMessage());
+            mostrarError("Error de BD", "Error al verificar el código del producto en la base de datos: " + e.getMessage());
             return false;
         }
 
-        // 2. Nombre: Obligatorio
+        // Paso 9: Validar nombre obligatorio
         if (nombre.isEmpty()) {
-            mensaje(Alert.AlertType.WARNING, "El nombre del producto es obligatorio.");
+            mostrarError(
+                    "Validación",
+                    "El nombre del producto es obligatorio."
+            );
             txtNombre.requestFocus();
             return false;
         }
 
-        // 3. Categoría: Debe seleccionarse
+        // Categoría obligatoria
         if (categoria == null) {
-            mensaje(Alert.AlertType.WARNING, "Debe seleccionar una categoría.");
+            mostrarError("Validación", "Debe seleccionar una categoría.");
             cmbCategoria.requestFocus();
             return false;
         }
 
-        // 4. Precio Venta: Numérico y mayor que cero
+        // Precio Venta numérico y mayor a 0
         if (precioStr.isEmpty()) {
-            mensaje(Alert.AlertType.WARNING, "El precio de venta es obligatorio.");
+            mostrarError("Validación", "El precio de venta es obligatorio.");
             txtPrecio.requestFocus();
             return false;
         }
@@ -172,19 +178,19 @@ public class ProductoController {
         try {
             BigDecimal precio = new BigDecimal(precioStr);
             if (precio.compareTo(BigDecimal.ZERO) <= 0) {
-                mensaje(Alert.AlertType.WARNING, "El precio de venta debe ser un valor numérico mayor que cero.");
+                mostrarError("Validación", "El precio de venta debe ser un valor numérico mayor que cero.");
                 txtPrecio.requestFocus();
                 return false;
             }
         } catch (NumberFormatException e) {
-            mensaje(Alert.AlertType.ERROR, "El precio de venta debe ser un número válido.");
+            mostrarError("Validación", "El precio de venta debe ser un número válido.");
             txtPrecio.requestFocus();
             return false;
         }
 
-        // 5. Existencia: Entero y no negativo
+        // Existencia entero no negativo
         if (existenciaStr.isEmpty()) {
-            mensaje(Alert.AlertType.WARNING, "La existencia del producto es obligatoria.");
+            mostrarError("Validación", "La existencia del producto es obligatoria.");
             txtExistencia.requestFocus();
             return false;
         }
@@ -192,17 +198,16 @@ public class ProductoController {
         try {
             int existencia = Integer.parseInt(existenciaStr);
             if (existencia < 0) {
-                mensaje(Alert.AlertType.WARNING, "La existencia debe ser un número entero no negativo (mayor o igual a cero).");
+                mostrarError("Validación", "La existencia debe ser un número entero no negativo (mayor o igual a cero).");
                 txtExistencia.requestFocus();
                 return false;
             }
         } catch (NumberFormatException e) {
-            mensaje(Alert.AlertType.ERROR, "La existencia debe ser un número entero válido.");
+            mostrarError("Validación", "La existencia debe ser un número entero válido.");
             txtExistencia.requestFocus();
             return false;
         }
 
-        // 6. Activo: Se obtiene mediante chkActivo.isSelected()
         return true;
     }
 
@@ -244,10 +249,10 @@ public class ProductoController {
                     cargarProductos();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo registrar el producto en la base de datos.");
+                    mostrarError("Error", "No se pudo registrar el producto en la base de datos.");
                 }
             } catch (Exception e) {
-                mensaje(Alert.AlertType.ERROR, "Error de base de datos al guardar: " + e.getMessage());
+                mostrarError("Error", "Error de base de datos al guardar: " + e.getMessage());
             }
         }
     }
@@ -255,7 +260,7 @@ public class ProductoController {
     @FXML
     private void actualizar() {
         if (productoSeleccionado == null) {
-            mensaje(Alert.AlertType.WARNING, "Debe seleccionar un producto de la tabla para actualizar.");
+            mostrarError("Validación", "Debe seleccionar un producto de la tabla para actualizar.");
             return;
         }
 
@@ -274,10 +279,10 @@ public class ProductoController {
                     cargarProductos();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo actualizar el producto.");
+                    mostrarError("Error", "No se pudo actualizar el producto.");
                 }
             } catch (Exception e) {
-                mensaje(Alert.AlertType.ERROR, "Error de base de datos al actualizar: " + e.getMessage());
+                mostrarError("Error", "Error de base de datos al actualizar: " + e.getMessage());
             }
         }
     }
@@ -285,7 +290,7 @@ public class ProductoController {
     @FXML
     private void eliminar() {
         if (productoSeleccionado == null) {
-            mensaje(Alert.AlertType.WARNING, "Debe seleccionar un producto de la tabla para eliminar.");
+            mostrarError("Validación", "Debe seleccionar un producto de la tabla para eliminar.");
             return;
         }
 
@@ -302,10 +307,10 @@ public class ProductoController {
                     cargarProductos();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo eliminar el producto.");
+                    mostrarError("Error", "No se pudo eliminar el producto.");
                 }
             } catch (Exception e) {
-                mensaje(Alert.AlertType.ERROR, "No se puede eliminar el producto debido a restricciones en la base de datos.");
+                mostrarError("Error", "No se puede eliminar el producto debido a restricciones en la base de datos.");
             }
         }
     }
@@ -321,6 +326,14 @@ public class ProductoController {
         productoSeleccionado = null;
         rutaImagenSeleccionada = null;
         tblProductos.getSelectionModel().clearSelection();
+    }
+
+    private void mostrarError(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 
     private void mensaje(Alert.AlertType tipo, String texto) {
