@@ -117,50 +117,46 @@ public class ProductoController {
         });
     }
 
-    // Paso 17: Método para validar y construir el objeto Producto desde el formulario
+    // Paso 17: Método para construir y validar el Producto
     private Producto obtenerProductoFormulario() {
         String codigo = txtCodigo.getText().trim();
         String nombre = txtNombre.getText().trim();
 
         if (codigo.isEmpty()) {
-            txtCodigo.requestFocus();
             throw new IllegalArgumentException("El código es obligatorio.");
         }
 
         if (nombre.isEmpty()) {
-            txtNombre.requestFocus();
             throw new IllegalArgumentException("El nombre es obligatorio.");
         }
 
         Categoria categoria = cmbCategoria.getSelectionModel().getSelectedItem();
+
         if (categoria == null) {
-            cmbCategoria.requestFocus();
             throw new IllegalArgumentException("Debe seleccionar una categoría.");
         }
 
         BigDecimal precio;
+
         try {
             precio = new BigDecimal(txtPrecio.getText().trim());
         } catch (NumberFormatException e) {
-            txtPrecio.requestFocus();
             throw new IllegalArgumentException("El precio debe ser numérico.");
         }
 
         if (precio.compareTo(BigDecimal.ZERO) <= 0) {
-            txtPrecio.requestFocus();
             throw new IllegalArgumentException("El precio debe ser mayor que cero.");
         }
 
         int existencia;
+
         try {
             existencia = Integer.parseInt(txtExistencia.getText().trim());
         } catch (NumberFormatException e) {
-            txtExistencia.requestFocus();
             throw new IllegalArgumentException("La existencia debe ser un número entero.");
         }
 
         if (existencia < 0) {
-            txtExistencia.requestFocus();
             throw new IllegalArgumentException("La existencia no puede ser negativa.");
         }
 
@@ -174,6 +170,50 @@ public class ProductoController {
                 rutaImagenSeleccionada,
                 chkActivo.isSelected()
         );
+    }
+
+    // Paso 18: Controlar excepciones al guardar Producto
+    @FXML
+    private void guardarProducto() {
+        try {
+            Producto producto = obtenerProductoFormulario();
+
+            if (productoDAO.existeCodigo(producto.getCodigo())) {
+                mostrarAdvertencia(
+                        "Código duplicado",
+                        "Ya existe un producto con ese código."
+                );
+                return;
+            }
+
+            productoDAO.guardar(producto);
+
+            mostrarExito(
+                    "Producto registrado",
+                    "La información fue almacenada correctamente."
+            );
+
+            cargarProductos();
+            limpiarFormulario();
+
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(
+                    "Validación",
+                    e.getMessage()
+            );
+
+        } catch (SQLException e) {
+            mostrarError(
+                    "Error de base de datos",
+                    "No fue posible registrar el producto."
+            );
+        }
+    }
+
+    // Alias para el evento FXML si tu archivo FXML llama a "guardar"
+    @FXML
+    private void guardar() {
+        guardarProducto();
     }
 
     @FXML
@@ -191,46 +231,17 @@ public class ProductoController {
     }
 
     @FXML
-    private void guardar() {
-        try {
-            Producto producto = obtenerProductoFormulario();
-
-            // Verificación de código duplicado
-            if (productoDAO.existeCodigo(producto.getCodigo())) {
-                mostrarError("Código duplicado", "El código '" + producto.getCodigo() + "' ya está registrado. Ingrese uno diferente.");
-                txtCodigo.requestFocus();
-                return;
-            }
-
-            if (productoDAO.guardar(producto)) {
-                mostrarExito("Producto registrado", "El producto se guardó correctamente.");
-                cargarProductos();
-                limpiar();
-            } else {
-                mostrarError("Error de base de datos", "No fue posible registrar el producto.");
-            }
-        } catch (IllegalArgumentException e) {
-            mostrarError("Validación", e.getMessage());
-        } catch (SQLException e) {
-            mostrarError("Error de base de datos", "No fue posible registrar el producto.");
-            System.err.println(e.getMessage());
-        }
-    }
-
-    @FXML
     private void actualizar() {
         if (productoSeleccionado == null) {
-            mostrarError("Validación", "Debe seleccionar un producto de la tabla para actualizar.");
+            mostrarAdvertencia("Validación", "Debe seleccionar un producto de la tabla para actualizar.");
             return;
         }
 
         try {
             Producto datosNuevo = obtenerProductoFormulario();
 
-            // Verificación de código duplicado excluyendo el ID actual
             if (productoDAO.existeCodigoExcluyendoId(datosNuevo.getCodigo(), productoSeleccionado.getId())) {
-                mostrarError("Código duplicado", "El código '" + datosNuevo.getCodigo() + "' ya pertenece a otro producto.");
-                txtCodigo.requestFocus();
+                mostrarAdvertencia("Código duplicado", "El código '" + datosNuevo.getCodigo() + "' ya pertenece a otro producto.");
                 return;
             }
 
@@ -243,24 +254,23 @@ public class ProductoController {
             productoSeleccionado.setActivo(datosNuevo.isActivo());
 
             if (productoDAO.actualizar(productoSeleccionado)) {
-                mostrarExito("Producto actualizado", "El producto se actualizó correctamente.");
+                mostrarExito("Producto actualizado", "La información fue actualizada correctamente.");
                 cargarProductos();
-                limpiar();
+                limpiarFormulario();
             } else {
                 mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
             }
         } catch (IllegalArgumentException e) {
-            mostrarError("Validación", e.getMessage());
+            mostrarAdvertencia("Validación", e.getMessage());
         } catch (SQLException e) {
             mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
-            System.err.println(e.getMessage());
         }
     }
 
     @FXML
     private void eliminar() {
         if (productoSeleccionado == null) {
-            mostrarError("Validación", "Debe seleccionar un producto de la tabla para eliminar.");
+            mostrarAdvertencia("Validación", "Debe seleccionar un producto de la tabla para eliminar.");
             return;
         }
 
@@ -275,19 +285,18 @@ public class ProductoController {
                 if (productoDAO.eliminar(productoSeleccionado.getId())) {
                     mostrarExito("Producto eliminado", "El producto se eliminó correctamente.");
                     cargarProductos();
-                    limpiar();
+                    limpiarFormulario();
                 } else {
                     mostrarError("Error de base de datos", "No fue posible eliminar el producto.");
                 }
             } catch (SQLException e) {
-                mostrarError("Error de base de datos", "No fue posible eliminar el producto debido a restricciones o error en la BD.");
-                System.err.println(e.getMessage());
+                mostrarError("Error de base de datos", "No fue posible eliminar el producto debido a restricciones en la BD.");
             }
         }
     }
 
     @FXML
-    private void limpiar() {
+    private void limpiarFormulario() {
         txtCodigo.clear();
         txtNombre.clear();
         txtPrecio.clear();
@@ -297,6 +306,19 @@ public class ProductoController {
         productoSeleccionado = null;
         rutaImagenSeleccionada = null;
         tblProductos.getSelectionModel().clearSelection();
+    }
+
+    @FXML
+    private void limpiar() {
+        limpiarFormulario();
+    }
+
+    private void mostrarAdvertencia(String titulo, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(titulo);
+        alert.setHeaderText(null);
+        alert.setContentText(mensaje);
+        alert.showAndWait();
     }
 
     private void mostrarError(String titulo, String mensaje) {
