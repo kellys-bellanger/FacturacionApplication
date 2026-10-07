@@ -65,7 +65,7 @@ public class ProductoController {
                 productoSeleccionado = newVal;
                 txtCodigo.setText(newVal.getCodigo());
                 txtNombre.setText(newVal.getNombre());
-                txtPrecio.setText(newVal.getPrecioVenta().toString());
+                txtPrecio.setText(newVal.getPrecioVenta() != null ? newVal.getPrecioVenta().toString() : "");
                 txtExistencia.setText(String.valueOf(newVal.getExistencia()));
                 chkActivo.setSelected(newVal.isActivo());
                 cmbCategoria.setValue(newVal.getCategoria());
@@ -109,7 +109,7 @@ public class ProductoController {
             else if ("Inactivos".equals(estadoFiltro)) coincideEstado = !producto.isActivo();
 
             boolean coincideCategoria = true;
-            if (catFiltro != null && catFiltro.getId() != 0) {
+            if (catFiltro != null && catFiltro.getId() != null && catFiltro.getId() != 0) {
                 coincideCategoria = producto.getCategoria() != null && producto.getCategoria().getId().equals(catFiltro.getId());
             }
 
@@ -117,39 +117,41 @@ public class ProductoController {
         });
     }
 
-    // Paso 17: Método para construir y validar el Producto
+    // Paso 23: Método refactorizado para la construcción y validación estricta de Producto
     private Producto obtenerProductoFormulario() {
-        String codigo = txtCodigo.getText().trim();
-        String nombre = txtNombre.getText().trim();
+        String codigo = txtCodigo.getText() != null ? txtCodigo.getText().trim() : "";
+        String nombre = txtNombre.getText() != null ? txtNombre.getText().trim() : "";
 
+        // 1. Código vacío
         if (codigo.isEmpty()) {
             throw new IllegalArgumentException("El código es obligatorio.");
         }
 
+        // 2. Nombre vacío
         if (nombre.isEmpty()) {
             throw new IllegalArgumentException("El nombre es obligatorio.");
         }
 
+        // 3. Sin categoría
         Categoria categoria = cmbCategoria.getSelectionModel().getSelectedItem();
-
         if (categoria == null) {
             throw new IllegalArgumentException("Debe seleccionar una categoría.");
         }
 
+        // 4, 5 y 6. Precio texto, cero o negativo
         BigDecimal precio;
-
         try {
             precio = new BigDecimal(txtPrecio.getText().trim());
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("El precio debe ser numérico.");
+        } catch (Exception e) {
+            throw new IllegalArgumentException("El precio debe ser un valor numérico.");
         }
 
         if (precio.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("El precio debe ser mayor que cero.");
         }
 
+        // 7, 8 y 9. Existencia texto, decimal o negativa
         int existencia;
-
         try {
             existencia = Integer.parseInt(txtExistencia.getText().trim());
         } catch (NumberFormatException e) {
@@ -172,12 +174,13 @@ public class ProductoController {
         );
     }
 
-    // Paso 18: Controlar excepciones al guardar Producto
+    // Paso 18 & 23: Controlar excepciones al guardar Producto
     @FXML
     private void guardarProducto() {
         try {
             Producto producto = obtenerProductoFormulario();
 
+            // Código duplicado
             if (productoDAO.existeCodigo(producto.getCodigo())) {
                 mostrarAdvertencia(
                         "Código duplicado",
@@ -205,7 +208,7 @@ public class ProductoController {
         } catch (SQLException e) {
             mostrarError(
                     "Error de base de datos",
-                    "No fue posible registrar el producto."
+                    "No fue posible completar la operación."
             );
         }
     }
@@ -215,10 +218,9 @@ public class ProductoController {
         guardarProducto();
     }
 
-    // Paso 19: Validación de la operación UPDATE
+    // Paso 19 & 23: Validación de la operación UPDATE
     @FXML
     private void actualizarProducto() {
-        // 1. Comprobar que existe un registro seleccionado
         if (productoSeleccionado == null || productoSeleccionado.getId() == null) {
             mostrarAdvertencia(
                     "Selección requerida",
@@ -228,22 +230,18 @@ public class ProductoController {
         }
 
         try {
-            // 2. Validar nuevamente todos los campos y construir los datos actualizados
             Producto datosEditados = obtenerProductoFormulario();
 
-            // 3. Comprobar que los datos únicos (código) no pertenecen a OTRO registro
             if (productoDAO.existeCodigoExcluyendoId(datosEditados.getCodigo(), productoSeleccionado.getId())) {
                 mostrarAdvertencia(
                         "Código duplicado",
-                        "El código '" + datosEditados.getCodigo() + "' ya pertenece a otro producto registrado."
+                        "Ya existe un producto con ese código."
                 );
                 return;
             }
 
-            // Asegurar el ID del registro seleccionado para evitar inserciones accidentales
             datosEditados.setId(productoSeleccionado.getId());
 
-            // 4. Ejecutar el UPDATE
             boolean actualizado = productoDAO.actualizar(datosEditados);
 
             if (actualizado) {
@@ -252,17 +250,15 @@ public class ProductoController {
                         "La información del producto fue actualizada correctamente."
                 );
 
-                // 6. Actualizar el TableView y limpiar formulario
                 cargarProductos();
                 limpiarFormulario();
             } else {
                 mostrarError(
                         "Error de actualización",
-                        "No fue posible actualizar el producto en la base de datos."
+                        "No fue posible completar la operación."
                 );
             }
 
-            // 5. Controlar posibles excepciones
         } catch (IllegalArgumentException e) {
             mostrarAdvertencia(
                     "Validación",
@@ -271,7 +267,7 @@ public class ProductoController {
         } catch (SQLException e) {
             mostrarError(
                     "Error de base de datos",
-                    "No fue posible actualizar el producto."
+                    "No fue posible completar la operación."
             );
             System.err.println("Error SQL al actualizar: " + e.getMessage());
         }
@@ -282,10 +278,9 @@ public class ProductoController {
         actualizarProducto();
     }
 
-    // Paso 20: Validación de la operación DELETE
+    // Paso 20 & 23: Validación de la operación DELETE
     @FXML
     private void eliminarProducto() {
-        // 1. Comprobar que existe una selección
         if (productoSeleccionado == null || productoSeleccionado.getId() == null) {
             mostrarAdvertencia(
                     "Selección requerida",
@@ -294,7 +289,6 @@ public class ProductoController {
             return;
         }
 
-        // 2. Solicitar confirmación
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Confirmar eliminación");
         confirm.setHeaderText(null);
@@ -304,7 +298,6 @@ public class ProductoController {
 
         if (result.isPresent() && result.get() == ButtonType.OK) {
             try {
-                // 4. Ejecutar DELETE
                 boolean eliminado = productoDAO.eliminar(productoSeleccionado.getId());
 
                 if (eliminado) {
@@ -313,19 +306,16 @@ public class ProductoController {
                             "El producto se eliminó correctamente."
                     );
 
-                    // 6. Actualizar el TableView y limpiar formulario
                     cargarProductos();
                     limpiarFormulario();
                 } else {
                     mostrarError(
                             "Error al eliminar",
-                            "No se encontró el producto a eliminar."
+                            "No fue posible completar la operación."
                     );
                 }
 
-                // 3 y 5. Verificar restricciones y controlar SQLException
             } catch (SQLException e) {
-                // Error 547 en SQL Server representa violación de Clave Foránea (Integridad Referencial)
                 if (e.getErrorCode() == 547) {
                     mostrarError(
                             "Restricción de integridad",
@@ -334,7 +324,7 @@ public class ProductoController {
                 } else {
                     mostrarError(
                             "Error de base de datos",
-                            "No fue posible eliminar el producto debido a un error de base de datos."
+                            "No fue posible completar la operación."
                     );
                 }
                 System.err.println("Error SQL al eliminar: " + e.getMessage());

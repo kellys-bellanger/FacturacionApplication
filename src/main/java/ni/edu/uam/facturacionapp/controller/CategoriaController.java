@@ -41,7 +41,7 @@ public class CategoriaController {
             if (newVal != null) {
                 categoriaSeleccionada = newVal;
                 txtNombre.setText(newVal.getNombre());
-                chkActivo.setSelected(newVal.isActivo());
+                chkActivo.setSelected(newVal.isActiva());
             }
         });
 

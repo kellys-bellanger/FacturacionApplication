@@ -10,7 +10,6 @@ import java.util.List;
 
 public class ProductoDAO {
 
-    // Paso 16: Operación con try-with-resources y propagación de SQLException
     public boolean guardar(Producto producto) throws SQLException {
         String sql = """
             INSERT INTO producto (
@@ -33,7 +32,6 @@ public class ProductoDAO {
         }
     }
 
-    // Paso 16: Operación con try-with-resources y propagación de SQLException
     public boolean actualizar(Producto producto) throws SQLException {
         String sql = """
             UPDATE producto SET 
@@ -58,7 +56,6 @@ public class ProductoDAO {
         }
     }
 
-    // Paso 16: Operación con try-with-resources y propagación de SQLException
     public boolean eliminar(int id) throws SQLException {
         String sql = "DELETE FROM producto WHERE id = ?";
 
@@ -70,7 +67,6 @@ public class ProductoDAO {
         }
     }
 
-    // Paso 16: try-with-resources para Connection, PreparedStatement y ResultSet
     public List<Producto> listar() {
         List<Producto> lista = new ArrayList<>();
         String sql = """
@@ -109,11 +105,10 @@ public class ProductoDAO {
         return lista;
     }
 
-    // Paso 14 & 16: try-with-resources completo
     public boolean existeCodigo(String codigo) throws SQLException {
         String sql = """
             SELECT COUNT(*)
-            FROM Producto
+            FROM producto
             WHERE codigo = ?
             """;
 
@@ -131,11 +126,10 @@ public class ProductoDAO {
         return false;
     }
 
-    // Método auxiliar para evitar duplicados al actualizar
     public boolean existeCodigoExcluyendoId(String codigo, int idExcluir) throws SQLException {
         String sql = """
             SELECT COUNT(*)
-            FROM Producto
+            FROM producto
             WHERE codigo = ? AND id <> ?
             """;
 
