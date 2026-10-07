@@ -117,11 +117,10 @@ public class ProductoController {
         });
     }
 
-    // 8, 9 y 10. Validaciones del módulo Producto
+    // Validaciones del módulo Producto
     private boolean esFormularioValido(Integer idExcluir) {
         String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
         String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
-        String precioStr = txtPrecio.getText() == null ? "" : txtPrecio.getText().trim();
         String existenciaStr = txtExistencia.getText() == null ? "" : txtExistencia.getText().trim();
 
         // Paso 9: Validar código obligatorio
@@ -172,22 +171,24 @@ public class ProductoController {
             return false;
         }
 
-        // Precio Venta numérico y mayor a 0
-        if (precioStr.isEmpty()) {
-            mostrarError("Validación", "El precio de venta es obligatorio.");
+        // Pasos 11 y 12: Manejar NumberFormatException y Validar precio de venta (> 0)
+        BigDecimal precio;
+        try {
+            precio = new BigDecimal(txtPrecio.getText().trim());
+        } catch (NumberFormatException e) {
+            mostrarError(
+                    "Precio incorrecto",
+                    "El precio debe contener únicamente valores numéricos."
+            );
             txtPrecio.requestFocus();
             return false;
         }
 
-        try {
-            BigDecimal precio = new BigDecimal(precioStr);
-            if (precio.compareTo(BigDecimal.ZERO) <= 0) {
-                mostrarError("Validación", "El precio de venta debe ser un valor numérico mayor que cero.");
-                txtPrecio.requestFocus();
-                return false;
-            }
-        } catch (NumberFormatException e) {
-            mostrarError("Validación", "El precio de venta debe ser un número válido.");
+        if (precio.compareTo(BigDecimal.ZERO) <= 0) {
+            mostrarError(
+                    "Precio incorrecto",
+                    "El precio de venta debe ser mayor que cero."
+            );
             txtPrecio.requestFocus();
             return false;
         }
