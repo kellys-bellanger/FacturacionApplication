@@ -14,6 +14,7 @@ import ni.edu.uam.facturacionapp.model.Producto;
 
 import java.io.File;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.util.Optional;
 
 public class ProductoController {
@@ -116,44 +117,92 @@ public class ProductoController {
         });
     }
 
+    // 8. Validaciones del módulo Producto
     private boolean esFormularioValido(Integer idExcluir) {
-        if (txtCodigo.getText().isBlank() || txtNombre.getText().isBlank() ||
-                txtPrecio.getText().isBlank() || txtExistencia.getText().isBlank() ||
-                cmbCategoria.getValue() == null) {
-            mensaje(Alert.AlertType.WARNING, "Todos los campos obligatorios deben estar completos.");
+        String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
+        String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
+        String precioStr = txtPrecio.getText() == null ? "" : txtPrecio.getText().trim();
+        String existenciaStr = txtExistencia.getText() == null ? "" : txtExistencia.getText().trim();
+        Categoria categoria = cmbCategoria.getValue();
+
+        // 1. Código: Obligatorio
+        if (codigo.isEmpty()) {
+            mensaje(Alert.AlertType.WARNING, "El código del producto es obligatorio.");
+            txtCodigo.requestFocus();
             return false;
         }
 
-        String codigoIngresado = txtCodigo.getText().trim();
-        boolean codigoDuplicado = listaProductos.stream()
-                .anyMatch(p -> !p.getId().equals(idExcluir) && p.getCodigo().equalsIgnoreCase(codigoIngresado));
-        if (codigoDuplicado) {
-            mensaje(Alert.AlertType.WARNING, "El código del producto ya existe. Ingrese uno diferente.");
+        // 1. Código: No duplicado (consulta a BD)
+        try {
+            boolean duplicado = (idExcluir == null)
+                    ? productoDAO.existeCodigo(codigo)
+                    : productoDAO.existeCodigoExcluyendoId(codigo, idExcluir);
+
+            if (duplicado) {
+                mensaje(Alert.AlertType.WARNING, "El código del producto '" + codigo + "' ya está registrado. Ingrese uno diferente.");
+                txtCodigo.requestFocus();
+                return false;
+            }
+        } catch (SQLException e) {
+            mensaje(Alert.AlertType.ERROR, "Error al verificar el código del producto en la base de datos: " + e.getMessage());
+            return false;
+        }
+
+        // 2. Nombre: Obligatorio
+        if (nombre.isEmpty()) {
+            mensaje(Alert.AlertType.WARNING, "El nombre del producto es obligatorio.");
+            txtNombre.requestFocus();
+            return false;
+        }
+
+        // 3. Categoría: Debe seleccionarse
+        if (categoria == null) {
+            mensaje(Alert.AlertType.WARNING, "Debe seleccionar una categoría.");
+            cmbCategoria.requestFocus();
+            return false;
+        }
+
+        // 4. Precio Venta: Numérico y mayor que cero
+        if (precioStr.isEmpty()) {
+            mensaje(Alert.AlertType.WARNING, "El precio de venta es obligatorio.");
+            txtPrecio.requestFocus();
             return false;
         }
 
         try {
-            BigDecimal precio = new BigDecimal(txtPrecio.getText().trim());
+            BigDecimal precio = new BigDecimal(precioStr);
             if (precio.compareTo(BigDecimal.ZERO) <= 0) {
-                mensaje(Alert.AlertType.WARNING, "El precio de venta debe ser mayor a cero.");
+                mensaje(Alert.AlertType.WARNING, "El precio de venta debe ser un valor numérico mayor que cero.");
+                txtPrecio.requestFocus();
                 return false;
             }
         } catch (NumberFormatException e) {
-            mensaje(Alert.AlertType.ERROR, "El precio ingresado no es un número válido.");
+            mensaje(Alert.AlertType.ERROR, "El precio de venta debe ser un número válido.");
+            txtPrecio.requestFocus();
+            return false;
+        }
+
+        // 5. Existencia: Entero y no negativo
+        if (existenciaStr.isEmpty()) {
+            mensaje(Alert.AlertType.WARNING, "La existencia del producto es obligatoria.");
+            txtExistencia.requestFocus();
             return false;
         }
 
         try {
-            int existencia = Integer.parseInt(txtExistencia.getText().trim());
+            int existencia = Integer.parseInt(existenciaStr);
             if (existencia < 0) {
-                mensaje(Alert.AlertType.WARNING, "La existencia no puede ser negativa.");
+                mensaje(Alert.AlertType.WARNING, "La existencia debe ser un número entero no negativo (mayor o igual a cero).");
+                txtExistencia.requestFocus();
                 return false;
             }
         } catch (NumberFormatException e) {
             mensaje(Alert.AlertType.ERROR, "La existencia debe ser un número entero válido.");
+            txtExistencia.requestFocus();
             return false;
         }
 
+        // 6. Activo: Se obtiene mediante chkActivo.isSelected()
         return true;
     }
 
@@ -195,7 +244,7 @@ public class ProductoController {
                     cargarProductos();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo registrar el producto.");
+                    mensaje(Alert.AlertType.ERROR, "No se pudo registrar el producto en la base de datos.");
                 }
             } catch (Exception e) {
                 mensaje(Alert.AlertType.ERROR, "Error de base de datos al guardar: " + e.getMessage());
@@ -206,7 +255,7 @@ public class ProductoController {
     @FXML
     private void actualizar() {
         if (productoSeleccionado == null) {
-            mensaje(Alert.AlertType.WARNING, "Seleccione un producto de la tabla para modificar.");
+            mensaje(Alert.AlertType.WARNING, "Debe seleccionar un producto de la tabla para actualizar.");
             return;
         }
 
@@ -236,7 +285,7 @@ public class ProductoController {
     @FXML
     private void eliminar() {
         if (productoSeleccionado == null) {
-            mensaje(Alert.AlertType.WARNING, "Seleccione un producto de la tabla para eliminar.");
+            mensaje(Alert.AlertType.WARNING, "Debe seleccionar un producto de la tabla para eliminar.");
             return;
         }
 
@@ -275,6 +324,10 @@ public class ProductoController {
     }
 
     private void mensaje(Alert.AlertType tipo, String texto) {
-        new Alert(tipo, texto, ButtonType.OK).showAndWait();
+        Alert alert = new Alert(tipo);
+        alert.setTitle("Módulo de Productos");
+        alert.setHeaderText(null);
+        alert.setContentText(texto);
+        alert.showAndWait();
     }
 }

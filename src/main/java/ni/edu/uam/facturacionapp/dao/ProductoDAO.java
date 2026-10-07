@@ -117,4 +117,49 @@ public class ProductoDAO {
         }
         return lista;
     }
+
+    // Paso 8: Comprobar código no duplicado en BD al guardar
+    public boolean existeCodigo(String codigo) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM producto
+            WHERE LOWER(codigo) = LOWER(?)
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, codigo);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Paso 8: Comprobar código no duplicado en BD excluyendo un ID (UPDATE)
+    public boolean existeCodigoExcluyendoId(String codigo, int idExcluir) throws SQLException {
+        String sql = """
+            SELECT COUNT(*)
+            FROM producto
+            WHERE LOWER(codigo) = LOWER(?) AND id <> ?
+            """;
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, codigo);
+            ps.setInt(2, idExcluir);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
 }
