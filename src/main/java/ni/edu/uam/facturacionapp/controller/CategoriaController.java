@@ -46,25 +46,39 @@ public class CategoriaController {
         listaCategorias.addAll(categoriaDAO.listar());
     }
 
-    @FXML
-    private void guardar() {
-        if (txtNombre.getText().isBlank()) {
-            mensaje(Alert.AlertType.WARNING, "Ingrese el nombre de la categoría.");
-            return;
+    private boolean esFormularioValido(Integer idExcluir) {
+        if (txtNombre.getText() == null || txtNombre.getText().isBlank()) {
+            mensaje(Alert.AlertType.WARNING, "El campo Nombre es obligatorio.");
+            return false;
         }
 
-        Categoria nueva = new Categoria(null, txtNombre.getText().trim(), chkActivo.isSelected());
-        try {
-            if (categoriaDAO.guardar(nueva)) {
-                mensaje(Alert.AlertType.INFORMATION, "Categoría guardada con éxito.");
-                cargarCategorias();
-                limpiar();
-            } else {
-                mensaje(Alert.AlertType.ERROR, "No se insertó ninguna fila en la base de datos.");
+        String nombreIngresado = txtNombre.getText().trim();
+        boolean duplicado = listaCategorias.stream()
+                .anyMatch(c -> !c.getId().equals(idExcluir) && c.getNombre().equalsIgnoreCase(nombreIngresado));
+
+        if (duplicado) {
+            mensaje(Alert.AlertType.WARNING, "Ya existe una categoría registrada con el nombre: " + nombreIngresado);
+            return false;
+        }
+
+        return true;
+    }
+
+    @FXML
+    private void guardar() {
+        if (esFormularioValido(null)) {
+            Categoria nueva = new Categoria(null, txtNombre.getText().trim(), chkActivo.isSelected());
+            try {
+                if (categoriaDAO.guardar(nueva)) {
+                    mensaje(Alert.AlertType.INFORMATION, "Categoría guardada con éxito.");
+                    cargarCategorias();
+                    limpiar();
+                } else {
+                    mensaje(Alert.AlertType.ERROR, "No se pudo guardar la categoría en la base de datos.");
+                }
+            } catch (Exception e) {
+                mensaje(Alert.AlertType.ERROR, "Error de base de datos al guardar: " + e.getMessage());
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            mensaje(Alert.AlertType.ERROR, "Detalle del error: " + e.getMessage());
         }
     }
 
@@ -75,25 +89,21 @@ public class CategoriaController {
             return;
         }
 
-        if (txtNombre.getText().isBlank()) {
-            mensaje(Alert.AlertType.WARNING, "El nombre de la categoría no puede estar vacío.");
-            return;
-        }
+        if (esFormularioValido(categoriaSeleccionada.getId())) {
+            categoriaSeleccionada.setNombre(txtNombre.getText().trim());
+            categoriaSeleccionada.setActiva(chkActivo.isSelected());
 
-        categoriaSeleccionada.setNombre(txtNombre.getText().trim());
-        categoriaSeleccionada.setActiva(chkActivo.isSelected());
-
-        try {
-            if (categoriaDAO.actualizar(categoriaSeleccionada)) {
-                mensaje(Alert.AlertType.INFORMATION, "Categoría actualizada con éxito.");
-                cargarCategorias();
-                limpiar();
-            } else {
-                mensaje(Alert.AlertType.ERROR, "Error al actualizar la categoría.");
+            try {
+                if (categoriaDAO.actualizar(categoriaSeleccionada)) {
+                    mensaje(Alert.AlertType.INFORMATION, "Categoría actualizada con éxito.");
+                    cargarCategorias();
+                    limpiar();
+                } else {
+                    mensaje(Alert.AlertType.ERROR, "No se pudo actualizar la categoría.");
+                }
+            } catch (Exception e) {
+                mensaje(Alert.AlertType.ERROR, "Error de base de datos al actualizar: " + e.getMessage());
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            mensaje(Alert.AlertType.ERROR, "Detalle del error: " + e.getMessage());
         }
     }
 
@@ -117,11 +127,10 @@ public class CategoriaController {
                     cargarCategorias();
                     limpiar();
                 } else {
-                    mensaje(Alert.AlertType.ERROR, "No se pudo eliminar.");
+                    mensaje(Alert.AlertType.ERROR, "No se pudo eliminar la categoría.");
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                mensaje(Alert.AlertType.ERROR, "No se puede eliminar porque está asociada a un producto registrado.");
+                mensaje(Alert.AlertType.ERROR, "No se puede eliminar la categoría porque está asociada a uno o más productos.");
             }
         }
     }
