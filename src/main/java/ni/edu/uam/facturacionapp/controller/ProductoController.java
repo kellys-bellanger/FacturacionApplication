@@ -210,10 +210,141 @@ public class ProductoController {
         }
     }
 
-    // Alias para el evento FXML si tu archivo FXML llama a "guardar"
     @FXML
     private void guardar() {
         guardarProducto();
+    }
+
+    // Paso 19: Validación de la operación UPDATE
+    @FXML
+    private void actualizarProducto() {
+        // 1. Comprobar que existe un registro seleccionado
+        if (productoSeleccionado == null || productoSeleccionado.getId() == null) {
+            mostrarAdvertencia(
+                    "Selección requerida",
+                    "Debe seleccionar un producto de la tabla para actualizar."
+            );
+            return;
+        }
+
+        try {
+            // 2. Validar nuevamente todos los campos y construir los datos actualizados
+            Producto datosEditados = obtenerProductoFormulario();
+
+            // 3. Comprobar que los datos únicos (código) no pertenecen a OTRO registro
+            if (productoDAO.existeCodigoExcluyendoId(datosEditados.getCodigo(), productoSeleccionado.getId())) {
+                mostrarAdvertencia(
+                        "Código duplicado",
+                        "El código '" + datosEditados.getCodigo() + "' ya pertenece a otro producto registrado."
+                );
+                return;
+            }
+
+            // Asegurar el ID del registro seleccionado para evitar inserciones accidentales
+            datosEditados.setId(productoSeleccionado.getId());
+
+            // 4. Ejecutar el UPDATE
+            boolean actualizado = productoDAO.actualizar(datosEditados);
+
+            if (actualizado) {
+                mostrarExito(
+                        "Producto actualizado",
+                        "La información del producto fue actualizada correctamente."
+                );
+
+                // 6. Actualizar el TableView y limpiar formulario
+                cargarProductos();
+                limpiarFormulario();
+            } else {
+                mostrarError(
+                        "Error de actualización",
+                        "No fue posible actualizar el producto en la base de datos."
+                );
+            }
+
+            // 5. Controlar posibles excepciones
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(
+                    "Validación",
+                    e.getMessage()
+            );
+        } catch (SQLException e) {
+            mostrarError(
+                    "Error de base de datos",
+                    "No fue posible actualizar el producto."
+            );
+            System.err.println("Error SQL al actualizar: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void actualizar() {
+        actualizarProducto();
+    }
+
+    // Paso 20: Validación de la operación DELETE
+    @FXML
+    private void eliminarProducto() {
+        // 1. Comprobar que existe una selección
+        if (productoSeleccionado == null || productoSeleccionado.getId() == null) {
+            mostrarAdvertencia(
+                    "Selección requerida",
+                    "Debe seleccionar un producto de la tabla para eliminar."
+            );
+            return;
+        }
+
+        // 2. Solicitar confirmación
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Confirmar eliminación");
+        confirm.setHeaderText(null);
+        confirm.setContentText("¿Está seguro de eliminar el producto '" + productoSeleccionado.getNombre() + "'?");
+
+        Optional<ButtonType> result = confirm.showAndWait();
+
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                // 4. Ejecutar DELETE
+                boolean eliminado = productoDAO.eliminar(productoSeleccionado.getId());
+
+                if (eliminado) {
+                    mostrarExito(
+                            "Producto eliminado",
+                            "El producto se eliminó correctamente."
+                    );
+
+                    // 6. Actualizar el TableView y limpiar formulario
+                    cargarProductos();
+                    limpiarFormulario();
+                } else {
+                    mostrarError(
+                            "Error al eliminar",
+                            "No se encontró el producto a eliminar."
+                    );
+                }
+
+                // 3 y 5. Verificar restricciones y controlar SQLException
+            } catch (SQLException e) {
+                // Error 547 en SQL Server representa violación de Clave Foránea (Integridad Referencial)
+                if (e.getErrorCode() == 547) {
+                    mostrarError(
+                            "Restricción de integridad",
+                            "No se puede eliminar el producto porque está asociado a otros registros (facturas, detalles)."
+                    );
+                } else {
+                    mostrarError(
+                            "Error de base de datos",
+                            "No fue posible eliminar el producto debido a un error de base de datos."
+                    );
+                }
+                System.err.println("Error SQL al eliminar: " + e.getMessage());
+            }
+        }
+    }
+
+    @FXML
+    private void eliminar() {
+        eliminarProducto();
     }
 
     @FXML
@@ -227,71 +358,6 @@ public class ProductoController {
         File archivoSeleccionado = fileChooser.showOpenDialog(txtCodigo.getScene().getWindow());
         if (archivoSeleccionado != null) {
             rutaImagenSeleccionada = archivoSeleccionado.getAbsolutePath();
-        }
-    }
-
-    @FXML
-    private void actualizar() {
-        if (productoSeleccionado == null) {
-            mostrarAdvertencia("Validación", "Debe seleccionar un producto de la tabla para actualizar.");
-            return;
-        }
-
-        try {
-            Producto datosNuevo = obtenerProductoFormulario();
-
-            if (productoDAO.existeCodigoExcluyendoId(datosNuevo.getCodigo(), productoSeleccionado.getId())) {
-                mostrarAdvertencia("Código duplicado", "El código '" + datosNuevo.getCodigo() + "' ya pertenece a otro producto.");
-                return;
-            }
-
-            productoSeleccionado.setCodigo(datosNuevo.getCodigo());
-            productoSeleccionado.setNombre(datosNuevo.getNombre());
-            productoSeleccionado.setCategoria(datosNuevo.getCategoria());
-            productoSeleccionado.setPrecioVenta(datosNuevo.getPrecioVenta());
-            productoSeleccionado.setExistencia(datosNuevo.getExistencia());
-            productoSeleccionado.setRutaImagen(datosNuevo.getRutaImagen());
-            productoSeleccionado.setActivo(datosNuevo.isActivo());
-
-            if (productoDAO.actualizar(productoSeleccionado)) {
-                mostrarExito("Producto actualizado", "La información fue actualizada correctamente.");
-                cargarProductos();
-                limpiarFormulario();
-            } else {
-                mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
-            }
-        } catch (IllegalArgumentException e) {
-            mostrarAdvertencia("Validación", e.getMessage());
-        } catch (SQLException e) {
-            mostrarError("Error de base de datos", "No fue posible actualizar el producto.");
-        }
-    }
-
-    @FXML
-    private void eliminar() {
-        if (productoSeleccionado == null) {
-            mostrarAdvertencia("Validación", "Debe seleccionar un producto de la tabla para eliminar.");
-            return;
-        }
-
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Confirmar eliminación");
-        confirm.setHeaderText(null);
-        confirm.setContentText("¿Está seguro de eliminar el producto '" + productoSeleccionado.getNombre() + "'?");
-
-        Optional<ButtonType> result = confirm.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                if (productoDAO.eliminar(productoSeleccionado.getId())) {
-                    mostrarExito("Producto eliminado", "El producto se eliminó correctamente.");
-                    cargarProductos();
-                    limpiarFormulario();
-                } else {
-                    mostrarError("Error de base de datos", "No fue posible eliminar el producto.");
-                }
-            } catch (SQLException e) {
-                mostrarError("Error de base de datos", "No fue posible eliminar el producto debido a restricciones en la BD.");
-            }
         }
     }
 
