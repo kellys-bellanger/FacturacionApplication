@@ -10,7 +10,8 @@ import java.util.List;
 
 public class ProductoDAO {
 
-    public boolean guardar(Producto producto) {
+    // Paso 16: Operación con try-with-resources y propagación de SQLException
+    public boolean guardar(Producto producto) throws SQLException {
         String sql = """
             INSERT INTO producto (
                 codigo, nombre, categoria_id, precio_venta, existencia, ruta_imagen, activo
@@ -29,14 +30,11 @@ public class ProductoDAO {
             ps.setBoolean(7, producto.isActivo());
 
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al guardar producto: " + e.getMessage());
-            e.printStackTrace();
-            return false;
         }
     }
 
-    public boolean actualizar(Producto producto) {
+    // Paso 16: Operación con try-with-resources y propagación de SQLException
+    public boolean actualizar(Producto producto) throws SQLException {
         String sql = """
             UPDATE producto SET 
                 codigo = ?, nombre = ?, categoria_id = ?, precio_venta = ?, 
@@ -57,14 +55,11 @@ public class ProductoDAO {
             ps.setInt(8, producto.getId());
 
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al actualizar producto: " + e.getMessage());
-            e.printStackTrace();
-            return false;
         }
     }
 
-    public boolean eliminar(int id) {
+    // Paso 16: Operación con try-with-resources y propagación de SQLException
+    public boolean eliminar(int id) throws SQLException {
         String sql = "DELETE FROM producto WHERE id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -72,13 +67,10 @@ public class ProductoDAO {
 
             ps.setInt(1, id);
             return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            System.err.println("Error al eliminar producto: " + e.getMessage());
-            e.printStackTrace();
-            return false;
         }
     }
 
+    // Paso 16: try-with-resources para Connection, PreparedStatement y ResultSet
     public List<Producto> listar() {
         List<Producto> lista = new ArrayList<>();
         String sql = """
@@ -112,13 +104,12 @@ public class ProductoDAO {
                 lista.add(prod);
             }
         } catch (SQLException e) {
-            System.err.println("Error al listar productos: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("Error de base de datos al listar productos: " + e.getMessage());
         }
         return lista;
     }
 
-    // Paso 14: Controlar códigos duplicados (SQL exacto del paso)
+    // Paso 14 & 16: try-with-resources completo
     public boolean existeCodigo(String codigo) throws SQLException {
         String sql = """
             SELECT COUNT(*)
@@ -140,7 +131,7 @@ public class ProductoDAO {
         return false;
     }
 
-    // Método de soporte para ignorar el código propio durante actualización (UPDATE)
+    // Método auxiliar para evitar duplicados al actualizar
     public boolean existeCodigoExcluyendoId(String codigo, int idExcluir) throws SQLException {
         String sql = """
             SELECT COUNT(*)
