@@ -121,7 +121,6 @@ public class ProductoController {
     private boolean esFormularioValido(Integer idExcluir) {
         String codigo = txtCodigo.getText() == null ? "" : txtCodigo.getText().trim();
         String nombre = txtNombre.getText() == null ? "" : txtNombre.getText().trim();
-        String existenciaStr = txtExistencia.getText() == null ? "" : txtExistencia.getText().trim();
 
         // Paso 9: Validar código obligatorio
         if (codigo.isEmpty()) {
@@ -133,19 +132,22 @@ public class ProductoController {
             return false;
         }
 
-        // Validar código no duplicado (BD)
+        // Paso 14: Controlar códigos duplicados desde la base de datos
         try {
             boolean duplicado = (idExcluir == null)
                     ? productoDAO.existeCodigo(codigo)
                     : productoDAO.existeCodigoExcluyendoId(codigo, idExcluir);
 
             if (duplicado) {
-                mostrarError("Validación", "El código del producto '" + codigo + "' ya está registrado. Ingrese uno diferente.");
+                mostrarError(
+                        "Código duplicado",
+                        "El código del producto '" + codigo + "' ya está registrado. Ingrese uno diferente."
+                );
                 txtCodigo.requestFocus();
                 return false;
             }
         } catch (SQLException e) {
-            mostrarError("Error de BD", "Error al verificar el código del producto en la base de datos: " + e.getMessage());
+            mostrarError("Error de BD", "Error al verificar el código en la base de datos: " + e.getMessage());
             return false;
         }
 
@@ -161,7 +163,6 @@ public class ProductoController {
 
         // Paso 10: Validar la categoría del Producto
         Categoria categoria = cmbCategoria.getSelectionModel().getSelectedItem();
-
         if (categoria == null) {
             mostrarError(
                     "Validación",
@@ -171,7 +172,7 @@ public class ProductoController {
             return false;
         }
 
-        // Pasos 11 y 12: Manejar NumberFormatException y Validar precio de venta (> 0)
+        // Pasos 11 y 12: Validar precio de venta
         BigDecimal precio;
         try {
             precio = new BigDecimal(txtPrecio.getText().trim());
@@ -193,22 +194,23 @@ public class ProductoController {
             return false;
         }
 
-        // Existencia entero no negativo
-        if (existenciaStr.isEmpty()) {
-            mostrarError("Validación", "La existencia del producto es obligatoria.");
-            txtExistencia.requestFocus();
-            return false;
-        }
-
+        // Paso 13: Validar existencia (número entero y no negativo)
         try {
-            int existencia = Integer.parseInt(existenciaStr);
+            int existencia = Integer.parseInt(txtExistencia.getText().trim());
+
             if (existencia < 0) {
-                mostrarError("Validación", "La existencia debe ser un número entero no negativo (mayor o igual a cero).");
+                mostrarError(
+                        "Existencia incorrecta",
+                        "La existencia no puede ser negativa."
+                );
                 txtExistencia.requestFocus();
                 return false;
             }
         } catch (NumberFormatException e) {
-            mostrarError("Validación", "La existencia debe ser un número entero válido.");
+            mostrarError(
+                    "Existencia incorrecta",
+                    "La existencia debe ser un número entero."
+            );
             txtExistencia.requestFocus();
             return false;
         }

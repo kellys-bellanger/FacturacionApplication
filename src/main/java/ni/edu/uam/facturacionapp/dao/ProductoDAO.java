@@ -118,12 +118,12 @@ public class ProductoDAO {
         return lista;
     }
 
-    // Paso 8: Comprobar código no duplicado en BD al guardar
+    // Paso 14: Controlar códigos duplicados (SQL exacto del paso)
     public boolean existeCodigo(String codigo) throws SQLException {
         String sql = """
             SELECT COUNT(*)
-            FROM producto
-            WHERE LOWER(codigo) = LOWER(?)
+            FROM Producto
+            WHERE codigo = ?
             """;
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -140,12 +140,12 @@ public class ProductoDAO {
         return false;
     }
 
-    // Paso 8: Comprobar código no duplicado en BD excluyendo un ID (UPDATE)
+    // Método de soporte para ignorar el código propio durante actualización (UPDATE)
     public boolean existeCodigoExcluyendoId(String codigo, int idExcluir) throws SQLException {
         String sql = """
             SELECT COUNT(*)
-            FROM producto
-            WHERE LOWER(codigo) = LOWER(?) AND id <> ?
+            FROM Producto
+            WHERE codigo = ? AND id <> ?
             """;
 
         try (Connection conn = DatabaseConnection.getConnection();
